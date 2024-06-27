@@ -1,4 +1,5 @@
 #!/bin/bash
+
 echo "*****************************************"
 echo "                                         "
 echo "         Welcome to js-downloader        "
@@ -7,15 +8,21 @@ echo "                                         "
 echo "*****************************************"
 
 # Prompt the user for the base URL
-read -p "Enter the base URL (e.g., https://www.dailyom.com): " base_url
+read -p "Enter the base URL (e.g., https://www.example.com): " base_url
 
-# File containing the list of subdomains or target URLs
-subdomains_file="httpx_subd.txt"
+# Prompt the user for the subdomains file
+read -p "Enter the subdomains file (e.g., subdomains.txt): " subdomains_file
+
+# Check if the subdomains file exists
+if [[ ! -f "$subdomains_file" ]]; then
+  echo "The subdomains file '$subdomains_file' does not exist."
+  exit 1
+fi
 
 # Create a directory for JavaScript files
 mkdir -p js_files
 
-# Array to keep track of downloaded file names
+# Array to keep track of downloaded file names and URLs
 declare -A downloaded_files
 
 # Function to download JavaScript files
@@ -40,9 +47,10 @@ download_js_files() {
     file_name=$(basename "$download_url")
 
     # Check if file has already been downloaded (based on filename)
-    if [[ ! "${downloaded_files[$file_name]}" ]]; then
+    if [[ ! -e "js_files/$file_name" && ! "${downloaded_files[$file_name]}" ]]; then
       wget -P js_files "$download_url"
       downloaded_files["$file_name"]=1
+      echo "$download_url" >> urls.txt  # Store download URL in urls.txt
     fi
   done
 
@@ -55,6 +63,12 @@ while IFS= read -r url; do
   download_js_files "$url"
 done < "$subdomains_file"
 
+# Remove duplicate URLs in urls.txt
+sort -u -o urls.txt urls.txt
+
+# Clean up unnecessary files
+cd js_files || exit 1  # Change directory to js_files
+rm -rf *.js.*           # Remove redundant files
+
 echo "JavaScript files have been downloaded to the js_files directory."
-cd js_files;
-rm -rf *.js.* ;
+echo "Download URLs have been stored in urls.txt without duplicates."
